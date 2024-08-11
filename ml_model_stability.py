@@ -69,91 +69,6 @@ from LG_InfoTUtils import (
 
 
 
-def bootstrapped_model_prediction_stability(
-        model, X_train, X_test, cmp=JS_div_ccX, num_bootstraps=10
-    ):
-    """
-    In short, bootstrap-sample from X_train, retrain model m_i, and obtain
-    predictions of m_i on X_test `num_boostraps` times; then, return a metric
-    of divergence between the predicted value distributions.
-
-    models: list
-
-    returns what something like JS_div_ccX would (mean_value, std_value, values, kdes) as well as the model variants and their predicted values.
-
-    Example:
-    --------
-    # Given existing RandomForestRegressor rfr and train and test data...
-
-    >>> bootstrapped_model_prediction_stability(rfr, X_train, X_test)
-
-    (
-        0.0024152415009843805,
-        0.0014502869385804222,
-        array([0.00118089, 0.00119379, 0.00182453, 0.00237604, 0.00358754,
-           0.00130437, 0.0009027 , 0.0042498 , 0.00511751]),
-        [
-            <scipy.stats._kde.gaussian_kde object at 0x17696d890>,
-            <scipy.stats._kde.gaussian_kde object at 0x17696d550>,
-            <scipy.stats._kde.gaussian_kde object at 0x17696d850>,
-            <scipy.stats._kde.gaussian_kde object at 0x17696d9d0>,
-            <scipy.stats._kde.gaussian_kde object at 0x17696df10>,
-            <scipy.stats._kde.gaussian_kde object at 0x17696e050>,
-            <scipy.stats._kde.gaussian_kde object at 0x17696e190>,
-            <scipy.stats._kde.gaussian_kde object at 0x17696e350>,
-            <scipy.stats._kde.gaussian_kde object at 0x17696e3d0>,
-            <scipy.stats._kde.gaussian_kde object at 0x17696e590>
-        ],
-        array([[142.96614281, 132.51856678, 135.02081884, ..., 135.1775516 ,
-            149.66795403, 139.22576473],
-           [149.11558372, 151.81128986, 155.61121179, ..., 146.35321614,
-            151.80135342, 147.82309865],
-           [168.31450851, 171.95018105, 166.55004707, ..., 172.95269607,
-            172.28959327, 168.71572942],
-           ...,
-           [168.13041755, 159.2104306 , 177.58982245, ..., 172.28052877,
-            169.10345888, 167.26486345],
-           [181.16399055, 186.33158772, 165.15364887, ..., 213.88432369,
-            181.54954172, 200.83714306],
-           [ 88.81910801,  85.86636109,  84.74612153, ...,  92.6606158 ,
-             96.30901473,  92.37009859]]),
-        [
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400),
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400),
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400),
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400),
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400),
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400),
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400),
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400),
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400),
-            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15,
-                          n_estimators=400)
-        ]
-    )
-    """
-
-    model_variants = bootstrap_models(model, X_train, num_bootstraps)
-    Y_pred = get_Y_pred(model_variants, X_test)
-
-    # I am unpacking the values to remind myself of what the metric returns
-    mean_value, std_value, values, kdes = JS_div_ccX(Y_pred)
-
-    # return distributions as well so that sampled/simulated values can be
-    # looked at
-    return (mean_value, std_value, values, kdes, Y_pred, model_variants)
-
-
-
 def bootstrap_models(model, X_train, num_bootstraps=10):
     """
     """
@@ -186,19 +101,68 @@ def get_Y_pred(models, X_test):
 
 
 
-def plot_predicted_value_distributions(
-        distributions, kdes, n_samples=1000, div=None, ax=None):
+def bootstrapped_model_prediction_stability(
+        model, X_train, X_test, cmp=JS_div_ccX, num_bootstraps=10
+    ):
     """
-    distributions are needed for the range of values
+    In short, bootstrap-sample from X_train, retrain model m_i, and obtain
+    predictions of m_i on X_test `num_boostraps` times; then, return a metric
+    of divergence between the predicted value distributions.
+
+    models: list
+
+    returns what something like JS_div_ccX would (mean_value, std_value, values, kdes) as well as the model variants and their predicted values.
+
+    Example:
+    --------
+    # Given existing RandomForestRegressor rfr and train and test data...
+
+    >>> bootstrapped_model_prediction_stability(rfr, X_train, X_test)
+    (
+        0.0024152415009843805,
+        0.0014502869385804222,
+        array([0.00118089, 0.00119379, 0.00182453, 0.00237604, 0.00358754,
+           0.00130437, 0.0009027 , 0.0042498 , 0.00511751]),
+        [
+            <scipy.stats._kde.gaussian_kde object at 0x17696d890>,
+            :
+        ],
+        array([[142.96614281, 132.51856678, 135.02081884, ..., 135.1775516 ,
+            149.66795403, 139.22576473],
+           ...,
+        [
+            RandomForestRegressor(max_depth=8, min_samples_leaf=8, min_samples_split=15, n_estimators=400),
+            :
+        ]
+    )
+    """
+
+    model_variants = bootstrap_models(model, X_train, num_bootstraps)
+    Y_pred = get_Y_pred(model_variants, X_test)
+
+    # I am unpacking the values to remind myself of what the metric returns
+    mean_value, std_value, values, kdes = JS_div_ccX(Y_pred)
+
+    # return distributions as well so that sampled/simulated values can be
+    # looked at
+    return (mean_value, std_value, values, kdes, Y_pred, model_variants)
+
+
+
+def plot_predicted_value_distributions(
+        Y_pred, kdes, n_samples=1000, ax=None):
+    """
+    Y_pred are needed for the range of values
     kdes are needed for inferring densities at equally-spaced points
+    could parameterise "decorations" (e.g., legend)
 
     Example:
     --------
     # take the above example for model_prediction_stability...
-    ax = plot_predicted_value_distributions(distributions, kdes, div=mean_div)
+    ax = plot_predicted_value_distributions(Y_pred, kdes)
     """
 
-    min_x, max_x = np.min(distributions), np.max(distributions)
+    min_x, max_x = np.min(Y_pred), np.max(Y_pred)
     # generate samples to have densities evaluated on
     x_plot = np.linspace(min_x, max_x, 1000)
     # each KDE is evaluated on the same set of x values
@@ -211,12 +175,41 @@ def plot_predicted_value_distributions(
         ax.plot(x_plot, y_plot, label=f"p{i+1}")
     ax.legend()
 
-    if div:
-        ax.text(
-            0.01, 0.98, f'mean divergence: {div}',
-            verticalalignment='top', horizontalalignment='left',
-            transform=plt.gca().transAxes,
-            bbox=dict(facecolor='white', alpha=0.5)
-        )
+    # if div:
+    #     ax.text(
+    #         0.01, 0.98, f'mean divergence: {div}',
+    #         verticalalignment='top', horizontalalignment='left',
+    #         transform=ax.transAxes,
+    #         bbox=dict(facecolor='white', alpha=0.5)
+    #     )
 
     return ax
+
+
+
+def mean_pointwise_prediction_variance_Y(Y_pred):
+    """
+    Y_pred's shape is (len(X_test), len(model_variants))
+    """
+
+    means = np.mean(Y_pred, axis=0)
+    std_devs = np.std(Y_pred, axis=0)
+    coefs_var = std_devs / means
+    mean_coef_var = np.mean(coefs_var)
+
+    return mean_coef_var
+
+
+
+def mean_pointwise_prediction_variance_M(models):
+    """
+    I assuming that models have already been fitted.
+    """
+
+    Y_pred = get_Y_pred(models, X_test)
+
+    return mean_pointwise_prediction_variance_Y(Y_pred)
+
+
+
+
