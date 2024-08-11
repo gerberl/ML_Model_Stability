@@ -1,4 +1,6 @@
 """
+First go at this: 11-Aug-24. I am sure there is plenty of refactoring needed.
+
 One needs to install `LG_InfoTUtils` and its dependencies:
 
 * install it from https://github.com/gerberl/LG_InfoTUtils. The following should
@@ -35,7 +37,7 @@ def model_prediction_stability(model, X_train, X_test, cmp=JS_div_ccX, num_boots
     Example:
     --------
     >>> ames_full = pd.read_csv(
-        'https://raw.githubusercontent.com/gerberl/6g7v0017-2122/main/datasets/ames/train.csv'
+        'https://raw.githubusercontent.com/gerberl/ML_Model_Stability/main/data/ames/train.csv'
     )
     >>> cols_of_interest = [
         'OverallQual', 'GrLivArea', 'GarageCars', 'GarageArea', 'TotalBsmtSF',
@@ -52,29 +54,28 @@ def model_prediction_stability(model, X_train, X_test, cmp=JS_div_ccX, num_boots
     )
     >>> rfr.fit(X_train, y_train)
         
-    >>> model_prediction_stability(rfr, X_train, X_test)
+    >>> mean_div, std_div, divs, distributions, kdes = model_prediction_stability(rfr, X_train, X_test)
 
+    >>> print(mean_div)
+    0.0015442675065352512
 
-    CPU times: user 25 s, sys: 1.05 s, total: 26 s
-    Wall time: 25.8 s
-    (
-        0.0020550776835121503,
-        0.00137419705739459,
-        array([0.00260392, 0.00159066, 0.00308427, 0.00132454, 0.00094505,
-           0.00168814, 0.00135757, 0.00056038, 0.00534118]),
-        [
-            <scipy.stats._kde.gaussian_kde object at 0x159a68a90>,
-            <scipy.stats._kde.gaussian_kde object at 0x159a6b7d0>,
-            <scipy.stats._kde.gaussian_kde object at 0x159a6ad50>,
-            <scipy.stats._kde.gaussian_kde object at 0x159a6b290>,
-            <scipy.stats._kde.gaussian_kde object at 0x159a6a350>,
-            <scipy.stats._kde.gaussian_kde object at 0x159a6b710>,
-            <scipy.stats._kde.gaussian_kde object at 0x159a6aa10>,
-            <scipy.stats._kde.gaussian_kde object at 0x159a6add0>,
-            <scipy.stats._kde.gaussian_kde object at 0x159a6b090>,
-            <scipy.stats._kde.gaussian_kde object at 0x159a6c2d0>
-        ]
-    )
+    >>> print(values.shape)
+    (9,)
+
+    >>> print(values)
+    [0.0014414  0.00179891 0.00154782 0.00087064 0.00125398 0.00205539
+     0.00141449 0.00164772 0.00186806]
+
+    >>> print(distributions.shape)
+    (292, 10)
+
+    # each column is a distribution for a model; rows are the X_test instances
+    >>> distributions[:5, :2]
+    array([[146.22845178, 136.21150308],
+       [151.04972912, 150.299481  ],
+       [171.90415304, 170.22567176],
+       [227.57415478, 216.76904839],
+       [190.91997288, 179.77918165]])
     """
 
     predictions = np.empty((num_bootstraps, len(X_test))) 
@@ -91,6 +92,42 @@ def model_prediction_stability(model, X_train, X_test, cmp=JS_div_ccX, num_boots
     # I am unpacking the values to remind myself of what the metric returns
     mean_value, std_value, values, kdes = JS_div_ccX(distributions)
 
-    return (mean_value, std_value, values, kdes)
+    # return distributions as well so that sampled/simulated values can be
+    # looked at
+    return (mean_value, std_value, values, distributions, kdes)
 
 
+def plot_predicted_value_distributions(
+        distributions, kdes, n_samples=1000, div=None, ax=None):
+    """
+    distributions are needed for the range of values
+    kdes are needed for inferring densities at equally-spaced points
+
+    Example:
+    --------
+    # take the above example for model_prediction_stability...
+    ax = plot_predicted_value_distributions(distributions, kdes, div=mean_div)
+    """
+
+    min_x, max_x = np.min(distributions), np.max(distributions)
+    # generate samples to have densities evaluated on
+    x_plot = np.linspace(min_x, max_x, 1000)
+    # each KDE is evaluated on the same set of x values
+    ys_plot = [ kde(x_plot) for kde in kdes ]
+
+    if ax is None:
+        fig, ax = plt.subplots(1, 1, constrained_layout=True, sharey=True)
+
+    for (i, y_plot) in enumerate(ys_plot):
+        ax.plot(x_plot, y_plot, label=f"p{i+1}")
+    ax.legend()
+
+    if div:
+        ax.text(
+            0.01, 0.98, f'mean divergence: {div}',
+            verticalalignment='top', horizontalalignment='left',
+            transform=plt.gca().transAxes,
+            bbox=dict(facecolor='white', alpha=0.5)
+        )
+
+    return ax
