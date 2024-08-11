@@ -1,4 +1,12 @@
 """
+One needs to install `LG_InfoTUtils` and its dependencies:
+
+* install it from https://github.com/gerberl/LG_InfoTUtils. The following should
+  be sufficient: `pip install git+https://github.com/gerberl/LG_MLUtils.git`.
+
+* dependencies that would likely need to install in their local installation:
+    - `disfunctools`: https://github.com/gerberl/disfunctools
+    - `LG_MLUtils`: https://github.com/gerberl/LG_MLUtils
 
 """
 
@@ -15,9 +23,9 @@ from LG_InfoTUtils import (
 
 def model_prediction_stability(model, X_train, X_test, cmp=JS_div_ccX, num_bootstraps=10):
     """
-    In short, bootstrap-sample from X_train, retrain model m_i, obtain
-    predictions of m_i on X_test, and return a metric of divergence between the
-    predicted value distributions.
+    In short, bootstrap-sample from X_train, retrain model m_i, and obtain
+    predictions of m_i on X_test `num_boostraps` times; then, return a metric
+    of divergence between the predicted value distributions.
 
     models: list
 
@@ -69,7 +77,7 @@ def model_prediction_stability(model, X_train, X_test, cmp=JS_div_ccX, num_boots
     )
     """
 
-    predictions = np.zeros((num_bootstraps, len(X_test))) 
+    predictions = np.empty((num_bootstraps, len(X_test))) 
     for i in range(num_bootstraps):
         X_train_resampled, y_train_resampled = resample(
             X_train, y_train
