@@ -31,15 +31,15 @@ Example:
 )
 >>> rfr.fit(X_train, y_train)
     
->>> mean_div, std_div, divs, kdes, Y_pred, _ = bootstrapped_model_prediction_stability(rfr, X_train, X_test)
+>>> mean_div, std_div, divs, kdes, Y_pred, models = bootstrapped_model_prediction_stability(rfr, X_train, X_test)
 
 >>> print(mean_div)
 0.0015442675065352512
 
->>> print(values.shape)
+>>> print(divs.shape)
 (9,)
 
->>> print(values)
+>>> print(divs)
 [0.0014414  0.00179891 0.00154782 0.00087064 0.00125398 0.00205539
  0.00141449 0.00164772 0.00186806]
 
@@ -54,6 +54,19 @@ array([[146.22845178, 136.21150308],
    [227.57415478, 216.76904839],
    [190.91997288, 179.77918165]])
 
+# the mean pointwise coefficient of variance...
+>>> mean_pointwise_prediction_variance_Y(Y_pred)
+0.010523320795345998
+
+# Sanity check for model clones
+>>> model_clones = [rfr]*10
+>>> for model_clone in model_clones:
+        model_clone.fit(X_train, y_train)
+>>> mean_pointwise_prediction_variance_Y(clones_Y_pred)
+0.0
+>>> clones_Y_pred >>> get_Y_pred(model_clones, X_test)
+>>> mean_pointwise_prediction_variance_Y(clones_Y_pred)
+0.0
 """
 
 import numpy as np
@@ -69,7 +82,7 @@ from LG_InfoTUtils import (
 
 
 
-def bootstrap_models(model, X_train, num_bootstraps=10):
+def bootstrap_models(model, X_train, y_train, num_bootstraps=10):
     """
     """
 
@@ -102,7 +115,7 @@ def get_Y_pred(models, X_test):
 
 
 def bootstrapped_model_prediction_stability(
-        model, X_train, X_test, cmp=JS_div_ccX, num_bootstraps=10
+        model, X_train, y_train, X_test, cmp=JS_div_ccX, num_bootstraps=10
     ):
     """
     In short, bootstrap-sample from X_train, retrain model m_i, and obtain
@@ -137,7 +150,7 @@ def bootstrapped_model_prediction_stability(
     )
     """
 
-    model_variants = bootstrap_models(model, X_train, num_bootstraps)
+    model_variants = bootstrap_models(model, X_train, y_train, num_bootstraps)
     Y_pred = get_Y_pred(model_variants, X_test)
 
     # I am unpacking the values to remind myself of what the metric returns
@@ -189,19 +202,24 @@ def plot_predicted_value_distributions(
 
 def mean_pointwise_prediction_variance_Y(Y_pred):
     """
+    Reminding myself what I am looking for:
+
+    - for each data point in the test set, I would like to know what the variance in predictions is. The assumption is the higher the variance for each data point, the less stable a model (with its variants) is.
+
+    - I'll take mean/std by data point, and normalise the std by dividing it by the mean, making it a coefficient of variation.
+
     Y_pred's shape is (len(X_test), len(model_variants))
     """
 
-    means = np.mean(Y_pred, axis=0)
-    std_devs = np.std(Y_pred, axis=0)
+    means = np.mean(Y_pred, axis=1)
+    std_devs = np.std(Y_pred, axis=1)
     coefs_var = std_devs / means
-    mean_coef_var = np.mean(coefs_var)
 
-    return mean_coef_var
-
+    return np.mean(coefs_var), np.std(coefs_var), coefs_var
 
 
-def mean_pointwise_prediction_variance_M(models):
+
+def mean_pointwise_prediction_variance_M(models, X_test):
     """
     I assuming that models have already been fitted.
     """
